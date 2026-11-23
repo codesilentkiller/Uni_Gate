@@ -1,0 +1,17 @@
+<x-app-layout>
+    <x-slot name="header"><h2 class="text-xl font-semibold">Applications — {{ $institution->name }}</h2></x-slot>
+    <div class="mx-auto max-w-7xl p-8">
+        <a href="{{ route('institution.dashboard', $institution) }}" class="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-600">← Back to institution dashboard</a>
+        <div class="mb-6"><p class="text-sm text-slate-500">Institution application management</p><h1 class="mt-1 text-2xl font-bold">Applications</h1></div>
+        @if(session('status'))<div class="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">{{ session('status') }}</div>@endif
+        <form method="GET" class="mb-5 grid gap-3 rounded-xl border bg-white p-4 lg:grid-cols-4">
+            <input name="search" value="{{ request('search') }}" placeholder="Application ID, name, email, phone or ID number" class="rounded-lg border-slate-300 text-sm">
+            <select name="status" class="rounded-lg border-slate-300 text-sm"><option value="">All statuses</option>@foreach(['draft','submitted','under_review','documents_pending','awaiting_payment','approved','offered','accepted','rejected','withdrawn'] as $status)<option value="{{ $status }}" @selected(request('status') === $status)>{{ str_replace('_',' ',ucwords($status)) }}</option>@endforeach</select>
+            <select name="programme_id" class="rounded-lg border-slate-300 text-sm"><option value="">All programmes</option>@foreach($programmes as $programme)<option value="{{ $programme->id }}" @selected((int) request('programme_id') === $programme->id)>{{ $programme->name }}</option>@endforeach</select>
+            <select name="eligibility" class="rounded-lg border-slate-300 text-sm"><option value="">All eligibility</option><option value="eligible" @selected(request('eligibility') === 'eligible')>Meets requirements</option><option value="not_eligible" @selected(request('eligibility') === 'not_eligible')>Does not meet requirements</option><option value="manual_review" @selected(request('eligibility') === 'manual_review')>Needs manual review</option></select>
+            <button class="rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white lg:col-span-4">Search & filter</button>
+        </form>
+        <div class="overflow-hidden rounded-2xl border bg-white"><table class="w-full text-sm"><thead class="border-b bg-slate-50 text-left text-slate-500"><tr><th class="px-6 py-4">Reference</th><th>Applicant</th><th>Programme</th><th>Status</th><th class="px-6 py-4">Action</th></tr></thead><tbody>@forelse($applications as $application)<tr class="border-b"><td class="px-6 py-5 font-semibold">{{ $application->application_reference }}</td><td>{{ $application->applicant->user->first_name }} {{ $application->applicant->user->last_name }}</td><td>{{ $application->programme->name }}</td><td><span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">{{ str_replace('_',' ',ucwords($application->status)) }}</span></td><td class="px-6 py-5"><a href="{{ route('institution.applications.show',[$institution,$application]) }}" class="font-semibold text-blue-700">Review</a></td></tr>@empty<tr><td colspan="5" class="px-6 py-12 text-center text-slate-500">No applications match the selected filters.</td></tr>@endforelse</tbody></table></div>
+        <div class="mt-5">{{ $applications->links() }}</div>
+    </div>
+</x-app-layout>

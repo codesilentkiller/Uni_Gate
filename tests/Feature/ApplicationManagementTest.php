@@ -91,6 +91,9 @@ class ApplicationManagementTest extends TestCase
             'programme_id' => $programme->id,
             'entry_level' => '100 Level',
             'personal_statement' => 'I want to study software engineering.',
+            'qualification_type' => 'WASSCE',
+            'qualification_index_number' => '4251000123',
+            'qualification_year' => '2025',
             'wassce_certificate' => $wassce,
             'id_card' => $idCard,
         ]);

@@ -25,6 +25,7 @@ class VerifyApplicationDocumentRequest extends FormRequest
         return [
             'status' => ['required', 'in:verified,rejected,replacement_required'],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'replacement_deadline' => ['nullable','required_if:status,replacement_required','date','after:today'],
         ];
     }
 }

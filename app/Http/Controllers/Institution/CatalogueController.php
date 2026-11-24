@@ -27,6 +27,7 @@ class CatalogueController extends Controller
             'name' => ['required','string','max:255'],
             'code' => ['required','string','max:30','unique:faculties,code,NULL,id,institution_id,'.$institution->id],
             'description' => ['nullable','string','max:5000'],
+            'tuition_fee' => ['nullable','numeric','min:0'],
         ]);
         $institution->faculties()->create($validated + ['status'=>'active']);
         return back()->with('status','Faculty created.');
@@ -69,6 +70,7 @@ class CatalogueController extends Controller
             'duration_years' => ['required','integer','min:1','max:10'],
             'description' => ['nullable','string','max:5000'],
             'entry_requirements' => ['nullable','string','max:5000'],
+            'tuition_fee' => ['nullable','numeric','min:0'],
             'status' => ['required','in:draft,active,inactive'],
         ]);
         $department = $institution->departments()->whereKey($validated['department_id'])->firstOrFail();

@@ -21,7 +21,7 @@
 @endphp
 <div class="min-h-screen">
     <aside class="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col bg-[#071b3c] px-5 py-6 text-white lg:flex">
-        <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
+        <a href="{{ route('home') }}" class="flex items-center gap-3">
             <span class="grid h-10 w-10 place-items-center rounded-xl bg-blue-500 text-sm font-black">U</span>
             <div><p class="font-bold">UniGate</p><p class="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-200">{{ $isPlatform ? 'Platform' : ($isInstitution ? 'Institution' : 'Applicant') }}</p></div>
         </a>
@@ -55,9 +55,10 @@
                 <a href="{{ route('profile.edit') }}" class="block rounded-lg px-4 py-3 text-slate-300 hover:bg-white/10">My profile</a>
                 <a href="{{ route('universities.index') }}" class="block rounded-lg px-4 py-3 text-slate-300 hover:bg-white/10">Explore universities</a>
                 <a href="{{ route('applicant.applications.index') }}" class="block rounded-lg px-4 py-3 text-slate-300 hover:bg-white/10">My applications</a>
-                <a href="{{ route('applicant.applications.index') }}" class="block rounded-lg px-4 py-3 text-slate-300 hover:bg-white/10">Documents</a>
+                <a href="{{ route('applicant.documents.index') }}" class="block rounded-lg px-4 py-3 {{ request()->routeIs('applicant.documents.*') ? 'bg-white/10' : 'text-slate-300 hover:bg-white/10' }}">Documents</a>
                 <a href="{{ route('applicant.admission-offers.index') }}" class="block rounded-lg px-4 py-3 text-slate-300 hover:bg-white/10">Admission offers</a>
                 <a href="{{ route('applicant.payments') }}" class="block rounded-lg px-4 py-3 text-slate-300 hover:bg-white/10">Payments</a>
+                <a href="{{ route('applicant.notifications.index') }}" class="flex items-center justify-between rounded-lg px-4 py-3 text-slate-300 hover:bg-white/10"><span>Notifications</span>@if(auth()->user()->unreadNotifications()->count())<span class="rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">{{ auth()->user()->unreadNotifications()->count() }}</span>@endif</a>
             @endif
         </nav>
 

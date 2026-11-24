@@ -13,7 +13,12 @@ class Programme extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['institution_id', 'department_id', 'name', 'code', 'award_type', 'duration_years', 'description', 'entry_requirements', 'status'];
+    protected $fillable = ['institution_id', 'department_id', 'name', 'code', 'award_type', 'duration_years', 'description', 'entry_requirements', 'tuition_fee', 'status'];
+
+    protected function casts(): array
+    {
+        return ['tuition_fee' => 'decimal:2'];
+    }
 
     public function institution(): BelongsTo
     {

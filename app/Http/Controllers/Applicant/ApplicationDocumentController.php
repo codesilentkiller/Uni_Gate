@@ -44,6 +44,11 @@ class ApplicationDocumentController extends Controller
             ->firstOrFail();
 
         $latest = $application->documents()->where('document_type_id', $documentType->id)->latest('version')->first();
+
+        if ($latest && $latest->status === 'replacement_required') {
+            abort_if($latest->replacement_deadline && now()->gt($latest->replacement_deadline), 422, 'The document replacement deadline has passed.');
+        }
+
         $version = $latest ? $latest->version + 1 : 1;
 
         $file = $request->file('document');
@@ -90,7 +95,8 @@ class ApplicationDocumentController extends Controller
             'reviewed_at' => now(),
         ]);
 
-        return back()->with('status', 'Document uploaded successfully.');
+        return redirect()->route('applicant.applications.documents.index', $application)
+            ->with('status', 'Document uploaded successfully. Your document list and version have been updated.');
     }
 
     public function download(ApplicationDocument $document): StreamedResponse
@@ -100,5 +106,26 @@ class ApplicationDocumentController extends Controller
         abort_unless(Storage::disk($document->disk)->exists($document->stored_path), 404);
 
         return Storage::disk($document->disk)->download($document->stored_path, $document->original_name, ['X-Content-Type-Options' => 'nosniff']);
+    }
+
+    public function dashboard(): \Illuminate\View\View
+    {
+        $applicant = auth()->user()->applicant;
+        abort_if(! $applicant, 403, 'Applicant profile is required.');
+
+        $applications = Application::with([
+            'institution',
+            'programme',
+            'documents.documentType',
+        ])
+            ->where('applicant_id', $applicant->id)
+            ->latest()
+            ->get();
+
+        $documents = $applications
+            ->flatMap(fn (Application $application) => $application->documents)
+            ->sortByDesc('created_at');
+
+        return view('applicant.documents', compact('applications', 'documents'));
     }
 }

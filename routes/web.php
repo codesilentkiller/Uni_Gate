@@ -1,4 +1,4 @@
-<?php
+<?
 
 use App\Http\Controllers\Admission\AdmissionDecisionController;
 use App\Http\Controllers\Admission\ApplicationReviewController;
@@ -80,12 +80,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('institution.staff.store');
 
     Route::get('/institution/{institution:slug}/students', function (Institution $institution) {
-        return view('institution.students', compact('institution'));
-    })->middleware(['institution', 'role:registrar,university-administrator'])->name('institution.students');
+        $students = $institution->applications()
+            ->with(['applicant.user', 'programme.department', 'admissionCycle.academicSession'])
+            ->where('status', 'accepted')
+            ->whereNotNull('student_id')
+            ->latest('accepted_at')
+            ->get();
+
+        return view('institution.students', compact('institution', 'students'));
+    })->middleware(['institution', 'role:registrar,university-administrator,admissions-officer'])->name('institution.students');
+
+    Route::post('/institution/{institution:slug}/applications/{application}/enroll', [InstitutionApplicationController::class, 'enroll'])
+        ->middleware(['institution', 'role:registrar,university-administrator'])
+        ->name('institution.applications.enroll');
 
     Route::get('/institution/{institution:slug}/finance', function (Institution $institution) {
         return view('institution.finance', compact('institution'));
     })->middleware(['institution', 'role:finance-officer,university-administrator'])->name('institution.finance');
+
+    Route::get('/documents', [ApplicantApplicationDocumentController::class, 'dashboard'])
+        ->name('applicant.documents.index');
 
     Route::get('/applications/{application}/documents', [ApplicantApplicationDocumentController::class, 'index'])
         ->name('applicant.applications.documents.index');
@@ -178,6 +192,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/applications/{application}/acceptance-letter', [ApplicantApplicationController::class, 'acceptanceLetter'])
         ->name('applicant.applications.acceptance-letter');
+
+    Route::get('/notifications', [\App\Http\Controllers\Applicant\NotificationController::class, 'index'])->name('applicant.notifications.index');
+    Route::patch('/notifications/{notification}/read', [\App\Http\Controllers\Applicant\NotificationController::class, 'read'])->name('applicant.notifications.read');
+    Route::patch('/notifications/read-all', [\App\Http\Controllers\Applicant\NotificationController::class, 'readAll'])->name('applicant.notifications.read-all');
+
+    Route::get('/applications/{application}/edit', [ApplicantApplicationController::class, 'edit'])->name('applicant.applications.edit');
+    Route::patch('/applications/{application}', [ApplicantApplicationController::class, 'update'])->name('applicant.applications.update');
+    Route::patch('/applications/{application}/confirm-enrollment', [ApplicantApplicationController::class, 'confirmEnrollment'])->name('applicant.applications.confirm-enrollment');
+
+    Route::patch('/examination-results/{result}', [\App\Http\Controllers\Applicant\ExaminationResultController::class, 'update'])->name('applicant.examination-results.update');
 });
 
 Route::middleware('auth')->group(function () {

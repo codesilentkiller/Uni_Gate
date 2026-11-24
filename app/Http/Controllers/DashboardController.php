@@ -27,6 +27,20 @@ class DashboardController extends Controller
             return view('dashboards.no-institution', compact('user'));
         }
 
-        return view('dashboards.applicant', compact('user'));
+        $applicant = $user->applicant;
+
+        $dashboardStats = [
+            'applications' => $applicant ? $applicant->applications()->count() : 0,
+            'submitted' => $applicant ? $applicant->applications()->whereIn('status', ['submitted', 'under_review', 'documents_pending', 'awaiting_payment', 'approved', 'offered', 'accepted', 'rejected'])->count() : 0,
+            'offers' => $applicant ? \App\Models\AdmissionOffer::whereHas('application', fn ($query) => $query->where('applicant_id', $applicant->id))->count() : 0,
+            'registrations' => $applicant ? $applicant->applications()->whereNotNull('student_id')->count() : 0,
+            'enrolled' => $applicant ? $applicant->applications()->whereNotNull('enrolled_at')->count() : 0,
+        ];
+
+        $recentApplications = $applicant
+            ? $applicant->applications()->with(['institution', 'programme', 'admissionCycle'])->latest()->limit(5)->get()
+            : collect();
+
+        return view('dashboards.applicant', compact('user', 'dashboardStats', 'recentApplications'));
     }
 }

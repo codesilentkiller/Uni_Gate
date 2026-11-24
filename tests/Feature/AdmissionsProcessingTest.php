@@ -14,6 +14,7 @@ use App\Models\Programme;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class AdmissionsProcessingTest extends TestCase
@@ -68,6 +69,11 @@ class AdmissionsProcessingTest extends TestCase
 
         $this->assertSame('offered',$application->refresh()->status);
         $this->assertSame('issued',AdmissionOffer::firstOrFail()->offer_status);
+
+        $this->assertDatabaseHas('notifications', [
+            'notifiable_id' => $applicantUser->id,
+            'notifiable_type' => \App\Models\User::class,
+        ]);
     }
 
     public function test_applicant_can_accept_offer_owned_by_their_application(): void
@@ -84,6 +90,8 @@ class AdmissionsProcessingTest extends TestCase
 
         $this->assertSame('accepted',$offer->refresh()->offer_status);
         $this->assertSame('accepted',$application->refresh()->status);
+        $application->refresh();
+        $this->assertMatchesRegularExpression('/^\d{7}$/', $application->student_id);
     }
 
     public function test_other_applicant_cannot_accept_offer(): void
@@ -109,5 +117,111 @@ class AdmissionsProcessingTest extends TestCase
         $staff->roles()->attach($role->id,['institution_id'=>$institution->id]);
 
         $this->actingAs($staff)->post(route('institution.applications.decision',[$institution,$application]),['decision'=>'rejected'])->assertStatus(422);
+    }
+
+    public function test_registrar_can_enroll_an_accepted_applicant(): void
+    {
+        [$institution,$programme,$cycle,$applicantUser,$applicant,$application] = $this->makeApplication();
+
+        $application->update([
+            'status' => 'accepted',
+            'student_id' => 'STU-TEST-2027-000001',
+            'accepted_at' => now(),
+        ]);
+
+        $registrar = User::factory()->create(['email_verified_at' => now()]);
+        $registrar->institutions()->attach($institution->id, ['status' => 'active', 'joined_at' => now()]);
+        $role = Role::create(['name' => 'Registrar', 'slug' => 'registrar', 'scope' => 'institution']);
+        $registrar->roles()->attach($role->id, ['institution_id' => $institution->id]);
+
+        $this->actingAs($registrar)
+            ->post(route('institution.applications.enroll', [$institution, $application]), [
+                'course_level' => '100 Level',
+                'entry_status' => 'regular',
+                'orientation_completed' => '1',
+            ])
+            ->assertSessionHas('status');
+
+        $this->assertNotNull($application->refresh()->enrolled_at);
+
+        $this->actingAs($registrar)
+            ->get(route('institution.students', $institution))
+            ->assertOk()
+            ->assertSee('STU-TEST-2027-000001')
+            ->assertSee('Enrolled');
+    }
+
+    public function test_applicant_dashboard_reflects_submitted_application(): void
+    {
+        [$institution,$programme,$cycle,$applicantUser,$applicant,$application] = $this->makeApplication();
+
+        $this->actingAs($applicantUser)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Applications')
+            ->assertSee($application->application_reference)
+            ->assertSee('Submitted');
+    }
+
+    public function test_approved_application_can_be_sent_back_for_under_review(): void
+    {
+        [$institution,$programme,$cycle,$applicantUser,$applicant,$application] = $this->makeApplication();
+
+        $application->update(['status' => 'approved']);
+
+        $staff = User::factory()->create(['email_verified_at'=>now()]);
+        $staff->institutions()->attach($institution->id,['status'=>'active','joined_at'=>now()]);
+        $role = Role::create(['name'=>'Admissions Officer','slug'=>'admissions-officer','scope'=>'institution']);
+        $staff->roles()->attach($role->id,['institution_id'=>$institution->id]);
+
+        $this->actingAs($staff)
+            ->patch(route('institution.applications.status',[$institution,$application]),[
+                'status'=>'under_review','notes'=>'Please review the corrected application.',
+            ])
+            ->assertSessionHas('status');
+
+        $this->assertSame('under_review',$application->refresh()->status);
+    }
+
+    public function test_repeating_approved_status_does_not_error_or_resend_notification(): void
+    {
+        [$institution,$programme,$cycle,$applicantUser,$applicant,$application] = $this->makeApplication();
+        $application->update(['status' => 'approved']);
+
+        $staff = User::factory()->create(['email_verified_at'=>now()]);
+        $staff->institutions()->attach($institution->id,['status'=>'active','joined_at'=>now()]);
+        $role = Role::create(['name'=>'Admissions Officer','slug'=>'admissions-officer','scope'=>'institution']);
+        $staff->roles()->attach($role->id,['institution_id'=>$institution->id]);
+
+        $this->actingAs($staff)
+            ->patch(route('institution.applications.status',[$institution,$application]),[
+                'status'=>'approved','notes'=>null,
+            ])
+            ->assertSessionHas('status','Application status is unchanged.');
+
+        $this->assertSame('approved',$application->refresh()->status);
+    }
+
+    public function test_direct_approved_status_sends_payment_notification_if_missing(): void
+    {
+        [$institution,$programme,$cycle,$applicantUser,$applicant,$application] = $this->makeApplication();
+        $application->update(['status' => 'approved']);
+
+        $staff = User::factory()->create(['email_verified_at'=>now()]);
+        $staff->institutions()->attach($institution->id,['status'=>'active','joined_at'=>now()]);
+        $role = Role::create(['name'=>'Admissions Officer','slug'=>'admissions-officer','scope'=>'institution']);
+        $staff->roles()->attach($role->id,['institution_id'=>$institution->id]);
+
+        $this->actingAs($staff)
+            ->patch(route('institution.applications.status',[$institution,$application]),[
+                'status'=>'approved','notes'=>null,
+            ])
+            ->assertSessionHas('status','Application status is unchanged.');
+
+        $this->assertDatabaseHas('notifications',[
+            'notifiable_id'=>$applicantUser->id,
+            'notifiable_type'=>User::class,
+            'type'=>\App\Notifications\AdmissionPaymentPromptNotification::class,
+        ]);
     }
 }

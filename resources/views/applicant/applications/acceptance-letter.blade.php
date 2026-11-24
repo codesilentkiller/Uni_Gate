@@ -30,12 +30,25 @@
                 <p class="mt-5">Your application reference is <strong>{{ $application->application_reference }}</strong>. This letter confirms your place for the {{ $application->admissionCycle->name }} admission session, subject to verification of the documents and qualifications submitted.</p>
             </section>
 
+            @php
+                $tuitionFee = $application->programme->tuition_fee
+                    ?: $application->programme->department->faculty->tuition_fee
+                    ?: 0;
+            @endphp
+
             <dl class="mt-10 grid gap-4 rounded-xl bg-slate-50 p-6 sm:grid-cols-2">
                 <div><dt class="text-xs uppercase text-slate-500">Programme</dt><dd class="mt-1 font-bold">{{ $application->programme->name }}</dd></div>
                 <div><dt class="text-xs uppercase text-slate-500">Entry level</dt><dd class="mt-1 font-bold">{{ $application->entry_level ?: '100 Level' }}</dd></div>
                 <div><dt class="text-xs uppercase text-slate-500">Application ID</dt><dd class="mt-1 font-bold">{{ $application->application_reference }}</dd></div>
                 <div><dt class="text-xs uppercase text-slate-500">Acceptance date</dt><dd class="mt-1 font-bold">{{ $application->accepted_at?->format('d M Y') }}</dd></div>
+                <div><dt class="text-xs uppercase text-slate-500">Programme tuition fee</dt><dd class="mt-1 font-bold">Le {{ number_format((float) $tuitionFee, 2) }}</dd></div>
             </dl>
+
+            <section class="mt-10 rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm leading-7 text-slate-700">
+                <h2 class="font-bold text-slate-900">Payment instructions and university terms</h2>
+                <p class="mt-3">Complete required fees through the university's officially approved payment channels before the stated registration deadline. Fees may vary by programme and faculty.</p>
+                <p class="mt-2">Registration remains subject to document verification, timely payment, academic conduct, and compliance with institutional regulations and applicable Sierra Leonean laws.</p>
+            </section>
 
             <footer class="mt-16 border-t pt-8 text-sm text-slate-600">
                 <p>Issued electronically through UniGate</p>

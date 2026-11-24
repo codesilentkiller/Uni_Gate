@@ -37,6 +37,7 @@ class ApplicationDocumentController extends Controller
                 'status' => $validated['status'],
                 'verification_notes' => $validated['notes'] ?? null,
                 'verified_at' => now(),
+                'replacement_deadline' => $validated['replacement_deadline'] ?? null,
             ]);
 
             $document->verificationHistory()->create([

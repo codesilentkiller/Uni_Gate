@@ -1,3 +1,32 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    html {
+        scroll-behavior: smooth;
+    }
+
+    [x-cloak] {
+        display: none !important;
+    }
+
+    section[id], header[id] {
+        scroll-margin-top: 72px;
+    }
+}
+
+@layer components {
+    .nav-link {
+        @apply relative py-3 text-sm font-bold text-slate-600 transition hover:text-blue-700;
+    }
+
+    .nav-link::after {
+        content: '';
+        @apply absolute bottom-1 left-0 h-0.5 w-full origin-left scale-x-0 rounded-full bg-blue-700 transition-transform;
+    }
+
+    .nav-link:hover::after {
+        @apply scale-x-100;
+    }
+}

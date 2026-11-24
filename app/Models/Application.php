@@ -15,8 +15,8 @@ class Application extends Model
 
     protected $fillable = [
         'application_reference', 'student_id', 'applicant_id', 'institution_id', 'programme_id',
-        'admission_cycle_id', 'status', 'entry_level', 'personal_statement',
-        'submitted_at', 'decision_at', 'accepted_at', 'withdrawn_at',
+        'admission_cycle_id', 'status', 'entry_level', 'course_level', 'entry_status', 'personal_statement', 'correction_notes', 'correction_requested_at', 'applicant_confirmed_enrollment_at',
+        'submitted_at', 'decision_at', 'accepted_at', 'enrolled_at', 'orientation_completed_at', 'withdrawn_at',
     ];
 
     protected function casts(): array
@@ -25,7 +25,11 @@ class Application extends Model
             'submitted_at' => 'datetime',
             'decision_at' => 'datetime',
             'accepted_at' => 'datetime',
+            'enrolled_at' => 'datetime',
             'withdrawn_at' => 'datetime',
+            'orientation_completed_at' => 'datetime',
+            'correction_requested_at' => 'datetime',
+            'applicant_confirmed_enrollment_at' => 'datetime',
         ];
     }
 
@@ -78,11 +82,11 @@ class Application extends Model
     {
         $allowed = [
             'draft' => ['submitted', 'withdrawn'],
-            'submitted' => ['under_review', 'documents_pending', 'awaiting_payment', 'withdrawn', 'rejected'],
+            'submitted' => ['under_review', 'documents_pending', 'awaiting_payment', 'approved', 'withdrawn', 'rejected'],
             'under_review' => ['documents_pending', 'awaiting_payment', 'approved', 'rejected', 'withdrawn'],
             'documents_pending' => ['under_review', 'withdrawn'],
             'awaiting_payment' => ['under_review', 'approved', 'rejected', 'withdrawn'],
-            'approved' => ['offered', 'accepted', 'rejected', 'withdrawn'],
+            'approved' => ['under_review', 'documents_pending', 'awaiting_payment', 'offered', 'accepted', 'rejected', 'withdrawn'],
             'offered' => ['accepted', 'declined', 'expired', 'rejected', 'withdrawn'],
             'accepted' => [],
             'declined' => [],

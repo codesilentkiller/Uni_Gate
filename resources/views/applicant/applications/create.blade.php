@@ -65,38 +65,27 @@
                 </div>
             </div>
 
-            <div class="mt-6 grid gap-5 md:grid-cols-2">
+            <div class="mt-6 grid gap-5 md:grid-cols-3">
                 <div>
-                    <label class="text-sm font-semibold">WASSCE index number</label>
-                    <input name="wassce_index_number" value="{{ old('wassce_index_number') }}" class="mt-2 w-full rounded-lg border-slate-300">
+                    <label class="text-sm font-semibold">Qualification type</label>
+                    <select name="qualification_type" required class="mt-2 w-full rounded-lg border-slate-300">
+                        <option value="WASSCE" @selected(old('qualification_type','WASSCE') === 'WASSCE')>WASSCE</option>
+                        <option value="GCSCE" @selected(old('qualification_type') === 'GCSCE')>GCSCE</option>
+                    </select>
                 </div>
                 <div>
-                    <label class="text-sm font-semibold">WASSCE year</label>
-                    <input type="number" name="wassce_year" min="1990" max="{{ now()->year }}" value="{{ old('wassce_year') }}" class="mt-2 w-full rounded-lg border-slate-300">
+                    <label class="text-sm font-semibold">Index / candidate number</label>
+                    <input name="qualification_index_number" value="{{ old('qualification_index_number', old('wassce_index_number')) }}" required class="mt-2 w-full rounded-lg border-slate-300">
                 </div>
-            </div>
-
-            <div class="mt-6">
-                <p class="text-sm font-semibold">WASSCE subjects and grades</p>
-                <p class="mt-1 text-xs text-slate-500">Enter at least six subjects, including English Language and Mathematics.</p>
-                <div class="mt-3 grid gap-3 md:grid-cols-2">
-                    @for($i=0;$i<6;$i++)
-                        <div class="grid grid-cols-[1fr_110px] gap-2">
-                            <input name="subjects[{{ $i }}][subject]" value="{{ old('subjects.'.$i.'.subject') }}" placeholder="Subject" class="rounded-lg border-slate-300 text-sm">
-                            <select name="subjects[{{ $i }}][grade]" class="rounded-lg border-slate-300 text-sm">
-                                <option value="">Grade</option>
-                                @foreach(['A1','B2','B3','C4','C5','C6','D7','E8','F9'] as $grade)
-                                    <option value="{{ $grade }}">{{ $grade }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    @endfor
+                <div>
+                    <label class="text-sm font-semibold">Qualification year</label>
+                    <input type="number" name="qualification_year" min="1990" max="{{ now()->year }}" value="{{ old('qualification_year', old('wassce_year')) }}" required class="mt-2 w-full rounded-lg border-slate-300">
                 </div>
             </div>
 
             <div class="mt-6 grid gap-5 md:grid-cols-2">
                 <div>
-                    <label class="text-sm font-semibold">Original WASSCE result / certificate copy</label>
+                    <label class="text-sm font-semibold">Original WASSCE / GCSCE result or certificate copy</label>
                     <input type="file" name="wassce_certificate" accept=".pdf,.jpg,.jpeg,.png" required class="mt-2 block w-full text-sm">
                     <p class="mt-1 text-xs text-slate-500">PDF, JPG or PNG, maximum 5 MB.</p>
                 </div>

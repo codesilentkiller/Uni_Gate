@@ -34,6 +34,15 @@ class ProfileController extends Controller
 
         $request->user()->save();
 
+        $applicant = $request->user()->applicant;
+        if ($applicant) {
+            $applicantData = $request->safe()->only(['date_of_birth','gender','nationality','country_of_residence','national_id']);
+            if ($request->hasFile('profile_photo')) {
+                $applicantData['profile_photo_path'] = $request->file('profile_photo')->store('profile-photos', 'unigate-private');
+            }
+            $applicant->update(array_filter($applicantData, fn ($value) => $value !== null));
+        }
+
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
 

@@ -27,9 +27,18 @@
                         <p class="mt-5 leading-7 text-slate-600">{{ $offer->offer_message }}</p>
                     @endif
                     @if($offer->offer_status === 'accepted' && $offer->application->student_id)
+                        @php
+                            $tuitionFee = $offer->application->programme->tuition_fee
+                                ?: $offer->application->programme->department->faculty->tuition_fee
+                                ?: 0;
+                        @endphp
                         <div class="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-5">
                             <p class="text-xs font-bold uppercase tracking-wider text-emerald-700">Student registration</p>
                             <p class="mt-2 text-xl font-bold">Student ID: {{ $offer->application->student_id }}</p>
+                            <p class="mt-2 text-sm">Tuition fee: <strong>Le {{ number_format((float) $tuitionFee, 2) }}</strong></p>
+                            @if($offer->application->enrolled_at)
+                                <p class="mt-2 text-sm font-bold text-emerald-800">Enrolled on {{ $offer->application->enrolled_at->format('d M Y') }}</p>
+                            @endif
                             <a href="{{ route('applicant.applications.acceptance-letter', $offer->application) }}" class="mt-4 inline-block rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white">View & print acceptance letter</a>
                         </div>
                     @endif

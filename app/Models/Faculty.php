@@ -12,7 +12,12 @@ class Faculty extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['institution_id', 'name', 'code', 'description', 'status'];
+    protected $fillable = ['institution_id', 'name', 'code', 'description', 'tuition_fee', 'status'];
+
+    protected function casts(): array
+    {
+        return ['tuition_fee' => 'decimal:2'];
+    }
 
     public function institution(): BelongsTo
     {

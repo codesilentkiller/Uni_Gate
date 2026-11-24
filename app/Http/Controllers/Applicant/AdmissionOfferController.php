@@ -13,7 +13,7 @@ class AdmissionOfferController extends Controller
 {
     public function index(Request $request): View
     {
-        $offers = AdmissionOffer::with(['institution','application.programme'])
+        $offers = AdmissionOffer::with(['institution','application.programme.department.faculty','application.admissionCycle'])
             ->whereHas('application', fn ($query) => $query->where('applicant_id',$request->user()->applicant?->id))
             ->latest()
             ->get();
@@ -59,7 +59,11 @@ class AdmissionOfferController extends Controller
                         ->whereNotNull('student_id')
                         ->count();
 
-                    $application->student_id = 'STU-'.$application->institution->institution_code.'-'.$application->admissionCycle->academicSession->starts_at->format('Y').'-'.str_pad((string) ($acceptedCount + 1), 6, '0', STR_PAD_LEFT);
+                    do {
+                        $studentId = str_pad((string) random_int(0, 9999999), 7, '0', STR_PAD_LEFT);
+                    } while (\App\Models\Application::withTrashed()->where('student_id', $studentId)->exists());
+
+                    $application->student_id = $studentId;
                     $application->accepted_at = now();
                     $application->save();
                 }

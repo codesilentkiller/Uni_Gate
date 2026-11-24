@@ -13,7 +13,7 @@
         @csrf
     </form>
 
-    <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6">
+    <form method="post" action="{{ route('profile.update') }}" enctype="multipart/form-data" class="mt-6 space-y-6">
         @csrf
         @method('patch')
 
@@ -57,6 +57,45 @@
                     @endif
                 </div>
             @endif
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+                <x-input-label for="phone" value="Phone" />
+                <x-text-input id="phone" name="phone" type="text" class="mt-1 block w-full" :value="old('phone', $user->phone)" />
+                <x-input-error class="mt-2" :messages="$errors->get('phone')" />
+            </div>
+            <div>
+                <x-input-label for="date_of_birth" value="Date of birth" />
+                <x-text-input id="date_of_birth" name="date_of_birth" type="date" class="mt-1 block w-full" :value="old('date_of_birth', $user->applicant?->date_of_birth?->format('Y-m-d'))" />
+                <x-input-error class="mt-2" :messages="$errors->get('date_of_birth')" />
+            </div>
+            <div>
+                <x-input-label for="gender" value="Gender" />
+                <select id="gender" name="gender" class="mt-1 block w-full rounded-md border-gray-300">
+                    <option value="">Prefer not to say</option>
+                    @foreach(['male'=>'Male','female'=>'Female','other'=>'Other','prefer_not_to_say'=>'Prefer not to say'] as $value=>$label)
+                        <option value="{{ $value }}" @selected(old('gender',$user->applicant?->gender)===$value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <x-input-label for="national_id" value="National ID / Passport" />
+                <x-text-input id="national_id" name="national_id" type="text" class="mt-1 block w-full" :value="old('national_id', $user->applicant?->national_id)" />
+            </div>
+            <div>
+                <x-input-label for="nationality" value="Nationality" />
+                <x-text-input id="nationality" name="nationality" type="text" class="mt-1 block w-full" :value="old('nationality', $user->applicant?->nationality ?: 'Sierra Leonean')" />
+            </div>
+            <div>
+                <x-input-label for="country_of_residence" value="Country of residence" />
+                <x-text-input id="country_of_residence" name="country_of_residence" type="text" class="mt-1 block w-full" :value="old('country_of_residence', $user->applicant?->country_of_residence ?: 'Sierra Leone')" />
+            </div>
+        </div>
+        <div>
+            <x-input-label for="profile_photo" value="Profile photo" />
+            <input id="profile_photo" name="profile_photo" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" class="mt-2 block w-full text-sm">
+            <p class="mt-1 text-xs text-slate-500">JPG or PNG, maximum 2 MB.</p>
         </div>
 
         <div class="flex items-center gap-4">

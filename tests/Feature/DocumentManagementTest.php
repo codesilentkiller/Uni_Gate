@@ -177,4 +177,15 @@ class DocumentManagementTest extends TestCase
             ->get(route('institution.application-documents.download', [$institutionB, $document]))
             ->assertNotFound();
     }
+
+    public function test_applicant_can_open_dedicated_documents_dashboard(): void
+    {
+        [$institution, $programme, $cycle, $applicantUser, $applicant, $application] = $this->createApplicationFixture();
+
+        $this->actingAs($applicantUser)
+            ->get(route('applicant.documents.index'))
+            ->assertOk()
+            ->assertSee('My Documents')
+            ->assertSee($application->application_reference);
+    }
 }

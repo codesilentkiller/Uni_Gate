@@ -64,6 +64,19 @@ class AdmissionDecisionController extends Controller
             }
 
             $decision->application->applicant->user->notify(new \App\Notifications\AdmissionDecisionNotification($decision));
+
+            if ($validated['decision'] === 'approved') {
+                $application = $decision->application->loadMissing(['programme.department.faculty', 'institution', 'applicant.user']);
+                $tuitionFee = $application->programme->tuition_fee ?: $application->programme->department->faculty->tuition_fee ?: 0;
+
+                $alreadySent = $application->applicant->user->notifications()
+                    ->where('type', \App\Notifications\AdmissionPaymentPromptNotification::class)
+                    ->exists();
+
+                if (! $alreadySent) {
+                    $application->applicant->user->notify(new \App\Notifications\AdmissionPaymentPromptNotification($application, (float) $tuitionFee));
+                }
+            }
         });
 
         return back()->with('status', 'Admission decision recorded.');

@@ -117,13 +117,38 @@ class ApplicationController extends Controller
                 ->whereNotNull('student_id')
                 ->count();
 
-            $application->student_id = 'STU-'.$institution->institution_code.'-'.now()->format('Y').'-'.str_pad((string) ($acceptedCount + 1), 6, '0', STR_PAD_LEFT);
+            do {
+                $application->student_id = str_pad((string) random_int(0, 9999999), 7, '0', STR_PAD_LEFT);
+            } while (Application::withTrashed()->where('student_id', $application->student_id)->exists());
+
             $application->accepted_at = now();
             $application->save();
         }
 
+        $previousStatus = $application->status;
+        $becameApproved = $previousStatus !== 'approved' && $validated['status'] === 'approved';
+
+        if ($application->status === $validated['status']) {
+            if ($validated['status'] === 'documents_pending' && ! empty($validated['notes'])) {
+                $application->update([
+                    'correction_notes' => $validated['notes'],
+                    'correction_requested_at' => now(),
+                ]);
+            }
+
+            if ($validated['status'] === 'approved') {
+                $this->ensureApprovalPaymentNotification($application);
+            }
+
+            return back()->with('status', 'Application status is unchanged.');
+        }
+
         if (! $application->transitionTo($validated['status'], $request->user(), $validated['notes'] ?? null)) {
             abort(422, 'This application status transition is not permitted.');
+        }
+
+        if ($becameApproved) {
+            $this->ensureApprovalPaymentNotification($application);
         }
 
         return back()->with('status', 'Application status updated.');
@@ -135,5 +160,46 @@ class ApplicationController extends Controller
     public function destroy(string $id)
     {
         //
+    }
+
+    /**
+     * Mark an accepted applicant as enrolled.
+     */
+    public function enroll(Request $request, Institution $institution, Application $application): RedirectResponse
+    {
+        abort_unless($application->institution_id === $institution->id, 404);
+
+        $validated = $request->validate([
+            'course_level' => ['required', 'string', 'max:50'],
+            'entry_status' => ['required', 'in:regular,transfer,postgraduate,part_time,distance'],
+            'orientation_completed' => ['nullable', 'accepted'],
+        ]);
+
+        if ($application->status !== 'accepted' || ! $application->student_id) {
+            abort(422, 'Only accepted applicants with a student ID can be enrolled.');
+        }
+
+        $application->update([
+            'course_level' => $validated['course_level'],
+            'entry_status' => $validated['entry_status'],
+            'enrolled_at' => $application->enrolled_at ?? now(),
+            'orientation_completed_at' => $request->boolean('orientation_completed') ? now() : null,
+        ]);
+
+        return back()->with('status', 'Applicant enrolled successfully.');
+    }
+
+    private function ensureApprovalPaymentNotification(Application $application): void
+    {
+        $application->loadMissing(['programme.department.faculty', 'institution', 'applicant.user']);
+        $tuitionFee = $application->programme->tuition_fee ?: $application->programme->department->faculty->tuition_fee ?: 0;
+
+        $alreadySent = $application->applicant->user->notifications()
+            ->where('type', \App\Notifications\AdmissionPaymentPromptNotification::class)
+            ->exists();
+
+        if (! $alreadySent) {
+            $application->applicant->user->notify(new \App\Notifications\AdmissionPaymentPromptNotification($application, (float) $tuitionFee));
+        }
     }
 }

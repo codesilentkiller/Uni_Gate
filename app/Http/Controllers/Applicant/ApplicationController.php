@@ -62,6 +62,9 @@ class ApplicationController extends Controller
             'national_id' => ['nullable','string','max:100'],
             'wassce_index_number' => ['nullable','string','max:100'],
             'wassce_year' => ['nullable','digits:4'],
+            'qualification_type' => ['required','in:WASSCE,GCSCE'],
+            'qualification_index_number' => ['nullable','required_with:qualification_type','string','max:100'],
+            'qualification_year' => ['nullable','required_with:qualification_type','digits:4'],
             'subjects' => ['nullable','array','max:12'],
             'subjects.*.subject' => ['nullable','string','max:100'],
             'subjects.*.grade' => ['nullable','in:A1,B2,B3,C4,C5,C6,D7,E8,F9'],
@@ -117,10 +120,11 @@ class ApplicationController extends Controller
 
             foreach ($validated['subjects'] ?? [] as $subject) {
                 if (! empty($subject['subject']) && ! empty($subject['grade'])) {
+                    $qualificationType = $validated['qualification_type'];
                     $applicant->examinationResults()->updateOrCreate([
-                        'examination_type' => 'WASSCE',
-                        'examination_year' => $validated['wassce_year'] ?: now()->year,
-                        'index_number' => $validated['wassce_index_number'] ?: null,
+                        'examination_type' => $qualificationType,
+                        'examination_year' => $validated['qualification_year'],
+                        'index_number' => $validated['qualification_index_number'],
                         'subject' => $subject['subject'],
                     ], [
                         'grade' => $subject['grade'],
@@ -139,7 +143,9 @@ class ApplicationController extends Controller
                 $documentType = DocumentType::firstOrCreate(
                     ['institution_id' => $institution->id, 'slug' => $documentSlug],
                     [
-                        'name' => $documentSlug === 'wassce-certificate' ? 'WASSCE Certificate' : 'National Identification Document',
+                        'name' => $documentSlug === 'wassce-certificate'
+                            ? $validated['qualification_type'].' Result / Certificate'
+                            : 'National Identification Document',
                         'allowed_extensions' => 'pdf,jpg,jpeg,png',
                         'max_file_size_kb' => 5120,
                         'status' => 'active',
@@ -245,9 +251,51 @@ class ApplicationController extends Controller
         abort_unless(auth()->user()->applicant?->is($application->applicant), 403);
         abort_unless($application->status === 'accepted' && $application->student_id, 404, 'Acceptance letter is not available yet.');
 
-        $application->load(['institution','programme.department','admissionCycle.academicSession','applicant.user']);
+        $application->load(['institution','programme.department.faculty','admissionCycle.academicSession','applicant.user']);
 
         return view('applicant.applications.acceptance-letter', compact('application'));
+    }
+
+    public function edit(Application $application): \Illuminate\View\View
+    {
+        abort_unless(auth()->user()->applicant?->is($application->applicant), 403);
+        abort_unless(in_array($application->status, ['draft', 'documents_pending', 'under_review'], true), 422, 'This application cannot be edited now.');
+
+        $application->load(['institution', 'programme.department', 'admissionCycle']);
+        return view('applicant.applications.edit', compact('application'));
+    }
+
+    public function update(\Illuminate\Http\Request $request, Application $application): RedirectResponse
+    {
+        abort_unless(auth()->user()->applicant?->is($application->applicant), 403);
+        abort_unless(in_array($application->status, ['draft', 'documents_pending', 'under_review'], true), 422, 'This application cannot be edited now.');
+
+        $validated = $request->validate([
+            'entry_level' => ['nullable', 'string', 'max:50'],
+            'personal_statement' => ['nullable', 'string', 'max:5000'],
+        ]);
+
+        $application->update($validated);
+
+        if ($application->correction_requested_at) {
+            $application->update([
+                'correction_notes' => null,
+                'correction_requested_at' => null,
+            ]);
+            $application->transitionTo('under_review', auth()->user(), 'Applicant submitted the requested application corrections.');
+        }
+
+        return redirect()->route('applicant.applications.show', $application)
+            ->with('status', 'Application corrections saved successfully.');
+    }
+
+    public function confirmEnrollment(Application $application): RedirectResponse
+    {
+        abort_unless(auth()->user()->applicant?->is($application->applicant), 403);
+        abort_unless($application->status === 'accepted' && $application->enrolled_at, 422, 'Enrollment must be completed by the university before confirmation.');
+
+        $application->update(['applicant_confirmed_enrollment_at' => now()]);
+        return back()->with('status', 'Enrollment confirmed successfully.');
     }
 
     private function generateReference(Institution $institution, AdmissionCycle $cycle): string

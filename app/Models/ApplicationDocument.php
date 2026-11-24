@@ -12,8 +12,8 @@ class ApplicationDocument extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['application_id','institution_id','applicant_id','document_type_id','uploaded_by','disk','stored_path','original_name','mime_type','size_bytes','checksum','version','status','verification_notes','verified_at'];
-    protected function casts(): array { return ['verified_at'=>'datetime']; }
+    protected $fillable = ['application_id','institution_id','applicant_id','document_type_id','uploaded_by','disk','stored_path','original_name','mime_type','size_bytes','checksum','version','status','verification_notes','verified_at','replacement_deadline'];
+    protected function casts(): array { return ['verified_at'=>'datetime','replacement_deadline'=>'datetime']; }
 
     public function application(): BelongsTo { return $this->belongsTo(Application::class); }
     public function institution(): BelongsTo { return $this->belongsTo(Institution::class); }
